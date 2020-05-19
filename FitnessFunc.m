@@ -6,6 +6,7 @@ function obj = FitnessFunc(Ucon,Np,Nc,Nb,A,B,C,yLo,yHi,S,R,dT,X0)
     X_eval(:,1) = X0;
     Y_eval(:,1) = X0;
     
+    Ucon = 1.*Ucon;
     % Repeat input according to blocking vector
     NMPC_U = zeros(size(B,2),Np-1);
     NMPC_U(:,1:Nb(1)) = repeat(Ucon(:,1),Nb(1),1);
