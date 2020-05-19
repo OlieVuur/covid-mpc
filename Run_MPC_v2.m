@@ -62,7 +62,7 @@ legend('S','E','I','Q','R','D','P')
 
 %Initialize control parameters
 dT = 1;
-kMax = 500;
+kMax = 1000;
 tsim = 0:kMax;
 
 % Control quarantined cases Y(4)
@@ -89,7 +89,7 @@ Np = 200;
 Nc = 30; % When using blocking the control horizon is not used
 Nb = [10 10 10]; % Blocking
 S = 1e-6;
-R = 1;
+R = 1e3;
 
 options = optimoptions('ga','Display', 'off', 'FitnessLimit', 0, 'MaxGenerations', 100, 'MaxTime', 5, 'FunctionTolerance', 1);
 
@@ -102,17 +102,23 @@ for k = 2:(kMax+1)
     % Uncontrolled portion of input
     Un = Yc(k-1,1)*Yc(k-1,3);
     
-    % On the first run, start without an InitialPopulationMatrix, on each
-    % successive run initialize with the final population from the previous
-    if k == 2
-        [Uc,fval,exitflag,output,final_pop] = ga(@(Ucon) FitnessFunc(Ucon,Np,Nc,Nb,A,B,C,y_lo,y_hi,S,R,dT,Xc),3,[],[],[],[],[0 0 0],[100 100 100],[],[1 2 3]);
-    else
-        [Uc,fval,exitflag,output,final_pop] = ga(@(Ucon) FitnessFunc(Ucon,Np,Nc,Nb,A,B,C,y_lo,y_hi,S,R,dT,Xc),3,[],[],[],[],[0 0 0],[100 100 100],[],[1 2 3]);
+    % Run controller on first iteration and every 10th iteration after that
+    if (mod(k,10) - 2) == 0
+        
+        % On the first run, start without an InitialPopulationMatrix, on each
+        % successive run initialize with the final population from the previous
+        if k == 2
+            [Uc,fval,exitflag,output,final_pop] = ga(@(Ucon) FitnessFunc(Ucon,Np,Nc,Nb,A,B,C,y_lo,y_hi,S,R,dT,Xc),3,[],[],[],[],[0 0 0],[100 100 100],[],[1 2 3]);
+        else
+            [Uc,fval,exitflag,output,final_pop] = ga(@(Ucon) FitnessFunc(Ucon,Np,Nc,Nb,A,B,C,y_lo,y_hi,S,R,dT,Xc),3,[],[],[],[],[0 0 0],[100 100 100],[],[1 2 3]);
+        end
+        %options = optimoptions('ga','InitialPopulationMatrix', final_pop, 'Display', 'off', 'FitnessLimit', 0, 'MaxGenerations', 50, 'MaxTime', 0.5, 'FunctionTolerance', 1);
+        %options = optimoptions('ga','InitialPopulationMatrix', final_pop, 'Display', 'off', 'FitnessLimit', 0, 'MaxGenerations', 100, 'MaxTime', 5, 'FunctionTolerance', 1);
+
+        Uinp = Uc(1);
+        
     end
-    %options = optimoptions('ga','InitialPopulationMatrix', final_pop, 'Display', 'off', 'FitnessLimit', 0, 'MaxGenerations', 50, 'MaxTime', 0.5, 'FunctionTolerance', 1);
-    %options = optimoptions('ga','InitialPopulationMatrix', final_pop, 'Display', 'off', 'FitnessLimit', 0, 'MaxGenerations', 100, 'MaxTime', 5, 'FunctionTolerance', 1);
     
-    Uinp = Uc(1);
     Umpc(k) = Uinp;
     
     U = Un*(100 - Uinp)./100;
@@ -127,7 +133,7 @@ for k = 2:(kMax+1)
     Yc(k,:) = C*Xc;
     tt = toc;
     % Display time per step or comment out
-    disp(strcat('Run ',num2str(k),' took ',num2str(tt),' seconds'))
+    fprintf('Run %d took %d seconds \n',k,tt)
     waitbar(k/kMax)
 end
 
