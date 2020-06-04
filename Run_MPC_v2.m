@@ -108,13 +108,13 @@ for k = 2:(kMax+1)
         % On the first run, start without an InitialPopulationMatrix, on each
         % successive run initialize with the final population from the previous
         if k == 2
-            [Uc,fval,exitflag,output,final_pop] = ga(@(Ucon) FitnessFunc(Ucon,Np,Nc,Nb,A,B,C,y_lo,y_hi,S,R,dT,Xc),3,[],[],[],[],[0 0 0],[100 100 100],[],[]);
+            [Uc,fval,exitflag,output,final_pop] = ga(@(Ucon) FitnessFunc(Ucon,Np,Nc,Nb,A,B,C,y_lo,y_hi,S,R,dT,Xc),3,[],[],[],[],[0 0 0],[100 100 100],[],[1 2 3]);
         else
-            [Uc,fval,exitflag,output,final_pop] = ga(@(Ucon) FitnessFunc(Ucon,Np,Nc,Nb,A,B,C,y_lo,y_hi,S,R,dT,Xc),3,[],[],[],[],[0 0 0],[100 100 100],[],[]);
+            [Uc,fval,exitflag,output,final_pop] = ga(@(Ucon) FitnessFunc(Ucon,Np,Nc,Nb,A,B,C,y_lo,y_hi,S,R,dT,Xc),3,[],[],[],[],[0 0 0],[100 100 100],[],[1 2 3],options);
         end
         %options = optimoptions('ga','InitialPopulationMatrix', final_pop, 'Display', 'off', 'FitnessLimit', 0, 'MaxGenerations', 50, 'MaxTime', 0.5, 'FunctionTolerance', 1);
         %options = optimoptions('ga','InitialPopulationMatrix', final_pop, 'Display', 'off', 'FitnessLimit', 0, 'MaxGenerations', 100, 'MaxTime', 5, 'FunctionTolerance', 1);
-        Uc = 1.*Uc;
+        Uc = 5.*Uc;
         
         Uinp = Uc(1);
         
