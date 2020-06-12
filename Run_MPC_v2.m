@@ -55,8 +55,8 @@ for k = 2:(kMax+1)
 end
 
 figure(1)
-plot(t,Y(:,1:7))
-legend('S','E','I','Q','R','D','P')
+plot(t,Y(:,2:7))
+legend('E','I','Q','R','D','P')
 
 %% Run control simulation 
 

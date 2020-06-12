@@ -64,7 +64,7 @@ plot(t,Y(:,2:7))
 legend_entries = {'S','E','I','Q','R','D','P'};
 legend(legend_entries(2:7));
 
-%% Run control simulation
+%% Run control simulation where input is lockdown level (integer value)
 
 % Beta multipliers
 % Level 5 - 1
@@ -73,6 +73,7 @@ legend(legend_entries(2:7));
 % Level 2 - 2.25
 % Level 1 - 2.5
 beta_levels = [2.5 2.0 1.6 1.25 1];
+%beta_levels = [1.7 1.6 1.4 1.2 1];
 
 %Initialize control parameters
 dT = 1;
@@ -200,7 +201,7 @@ subplot(2,1,2)
 plot(t,U_pre_def)
 legend('U')
 
-%% Run control simulation
+%% Run control simulation where input level is a real value
 
 %Initialize control parameters
 dT = 1;
