@@ -1,38 +1,15 @@
 %% Load model parameters
 load('SEIQRDP_ZA_v5.mat');
 
-%%
-dt = 1; % time step
-Tadd = 500;
-time1 = datetime(t_start):dt:datetime(datestr(floor(now)+datenum(Tadd)));
-N = numel(time1);
-t = (0:N-1).*dt;
-
-%Beta2 = [0.35 0.34 0.0025];
-Beta2 = [0.25 0.364 0.00265];
-
-[S,E,I,Q,R,D,P] = ...
-     SEIQRDP_v3(alpha,Beta2,gamma,delta,Lambda,Kappa,Npop,E0,I0,Q0,R0,D0,t,lambdaFun);
- 
- plot(t,Q)
-
 %% Define model
 % Evaluate time-based parameters to get constant values - can expand to
 % time-variant model later
 kMax = 1000;
 t_beta = 0:(2*kMax);
 
-t_eval = 1;
 beta = betaFun(Beta2,t_beta);
-lambda = lambdaFun(Lambda,t_eval);
-kappa = kappaFun(Kappa,t_eval);
-A = [-alpha   0      0             0         0 0 0;
-    0    -gamma   0             0         0 0 0;
-    0     gamma -delta          0         0 0 0;
-    0      0     delta  (-kappa - lambda) 0 0 0;
-    0      0      0          lambda       0 0 0;
-    0      0      0          kappa        0 0 0;
-    alpha  0      0             0         0 0 0];
+lambda = lambdaFun(Lambda,t_beta);
+kappa = kappaFun(Kappa,t_beta);
 
 C = eye(7);
 
@@ -58,6 +35,14 @@ Y(1,:) = X0;
 X = X0';
 
 for k = 2:(kMax+1)
+    
+    A = [-alpha   0      0             0         0 0 0;
+    0    -gamma   0             0         0 0 0;
+    0     gamma -delta          0         0 0 0;
+    0      0     delta  (-kappa(k) - lambda(k)) 0 0 0;
+    0      0      0          lambda(k)       0 0 0;
+    0      0      0          kappa(k)        0 0 0;
+    alpha  0      0             0         0 0 0];
     
     B = [-beta(k)/Npop beta(k)/Npop 0 0 0 0 0]';
     
@@ -92,11 +77,11 @@ beta_levels = [1/0.6 1/0.6*0.95 1.5 1.25 1];
 
 %Initialize control parameters
 dT = 1;
-kMax = 500;
+kMax = 1000;
 tsim = 0:kMax;
 
 % Control quarantined cases Y(4)
-y_hi = 1e7;
+y_hi = 2.1e5;
 y_lo = 0;
 
 % Initialze simulation in/outputs
@@ -112,7 +97,7 @@ Nc = 30; % When using blocking the control horizon is not used
 Nb = [10 10 10]; % Blocking
 S = 1e-6;
 R = 1e3;
-T = 1e2;
+T = 1e3;
 
 %options = optimoptions('ga','Display', 'off', 'FitnessLimit', 0, 'MaxGenerations', 100, 'MaxTime', 5, 'FunctionTolerance', 1);
 
@@ -122,6 +107,14 @@ h = waitbar(0,'Simulating...');
 
 for k = 2:(kMax+1)
     tic;
+    
+    A = [-alpha   0      0             0         0 0 0;
+           0    -gamma   0             0         0 0 0;
+           0     gamma -delta          0         0 0 0;
+           0     0     delta  (-kappa(k) - lambda(k)) 0 0 0;
+           0      0      0          lambda(k)       0 0 0;
+           0      0      0          kappa(k)        0 0 0;
+           alpha  0      0             0            0 0 0];
     
     B = [-beta(k)/Npop beta(k)/Npop 0 0 0 0 0]';
     % Uncontrolled portion of input
@@ -133,9 +126,9 @@ for k = 2:(kMax+1)
         % On the first run, start without an InitialPopulationMatrix, on each
         % successive run initialize with the final population from the previous
         if k == 2
-            [Uc,fval,exitflag,output,final_pop] = ga(@(Ucon) FitnessFunc_v2(Ucon,Np,Nc,Nb,A,B,C,y_lo,y_hi,S,R,T,beta_levels,k,beta,Npop,dT,Xc),3,[],[],[],[],[1 1 1],[5 5 5],[],[1 2 3]);
+            [Uc,fval,exitflag,output,final_pop] = ga(@(Ucon) FitnessFunc_v2_time_variant(Ucon,Np,Nc,Nb,alpha,gamma,delta,lambda,kappa,B,C,y_lo,y_hi,S,R,T,beta_levels,k,beta,Npop,dT,Xc),3,[],[],[],[],[1 1 1],[5 5 5],[],[1 2 3]);
         else
-            [Uc,fval,exitflag,output,final_pop] = ga(@(Ucon) FitnessFunc_v2(Ucon,Np,Nc,Nb,A,B,C,y_lo,y_hi,S,R,T,beta_levels,k,beta,Npop,dT,Xc),3,[],[],[],[],[1 1 1],[5 5 5],[],[1 2 3]);
+            [Uc,fval,exitflag,output,final_pop] = ga(@(Ucon) FitnessFunc_v2_time_variant(Ucon,Np,Nc,Nb,alpha,gamma,delta,lambda,kappa,B,C,y_lo,y_hi,S,R,T,beta_levels,k,beta,Npop,dT,Xc),3,[],[],[],[],[1 1 1],[5 5 5],[],[1 2 3]);
         end
         %options = optimoptions('ga','InitialPopulationMatrix', final_pop, 'Display', 'off', 'FitnessLimit', 0, 'MaxGenerations', 50, 'MaxTime', 0.5, 'FunctionTolerance', 1);
         %options = optimoptions('ga','InitialPopulationMatrix', final_pop, 'Display', 'off', 'FitnessLimit', 0, 'MaxGenerations', 100, 'MaxTime', 5, 'FunctionTolerance', 1);
@@ -174,6 +167,24 @@ subplot(2,1,2)
 plot(tsim,Umpc)
 legend('U')
 
+%% Plot for article
+time1 = datetime(t_start):datetime(datestr(datenum(t_start)+kMax));
+figure(3)
+subplot(2,1,1)
+plot(time1,Yc(:,4),time1,y_hi.*ones(length(Yc),1),'k--','LineWidth',1.2)
+xlim([min(time1),max(time1)])
+xtickformat('dd-MMM-yy')
+subplot(2,1,2)
+plot(time1,Umpc,'LineWidth',1.2)
+xlim([min(time1),max(time1)])
+xtickformat('dd-MMM-yy')
+
+%% Export
+set(gcf,'Units','Inches');
+pos = get(gcf,'Position');
+set(gcf,'PaperPositionMode','Auto','PaperUnits','Inches','PaperSize',[pos(3), pos(4)])
+print(gcf,'Herd_immunity_control','-dpdf','-r0')
+
 %% Run simulation with own control
 
 kMax = 1000;
@@ -186,11 +197,19 @@ Xo = X0';
 
 %U_pre_def = ones(kMax+1,1);
 %U_pre_def = beta_levels(Umpc);
-U_pre_def = 2.5.*ones(kMax+1,1);
-U_pre_def(30:300) = 1;
-U_pre_def(301:end) = 1.9;
+U_pre_def = 1.*ones(kMax+1,1);
+U_pre_def(1) = 1/0.4;
+U_pre_def(301:end) = 1;
 
 for k = 2:(kMax+1)
+    
+    A = [-alpha   0      0             0         0 0 0;
+    0    -gamma   0             0         0 0 0;
+    0     gamma -delta          0         0 0 0;
+    0      0     delta  (-kappa(k) - lambda(k)) 0 0 0;
+    0      0      0          lambda(k)       0 0 0;
+    0      0      0          kappa(k)        0 0 0;
+    alpha  0      0             0         0 0 0];
     
     B = [-beta(k)/Npop beta(k)/Npop 0 0 0 0 0]';
     
@@ -207,7 +226,7 @@ for k = 2:(kMax+1)
     Yo(k,:) = C*Xo;
 end
 
-figure(3)
+figure(4)
 subplot(2,1,1)
 plot(t,Yo(:,2:7))
 legend_entries = {'S','E','I','Q','R','D','P'};
@@ -290,7 +309,7 @@ close(h)
 
 % Plot results of control simulation
 
-figure(4)
+figure(6)
 subplot(2,1,1)
 plot(tsim,Yc_o(:,2:7))
 legend('E','I','Q','R','D','P')
